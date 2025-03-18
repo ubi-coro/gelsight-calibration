@@ -5,6 +5,7 @@ import cv2
 import matplotlib.pyplot as plt
 import yaml
 
+from examples.image3d import depth_map_to_point_cloud
 from gs_sdk.gs_reconstruct import Reconstructor
 from gs_sdk.viz_utils import plot_gradients
 
@@ -21,8 +22,8 @@ Arguments:
     --device: The device to load the neural network model. Options are 'cuda' or 'cpu'.
 """
 
-model_path = os.path.join(os.path.dirname(__file__), "models", "gsmini.pth")
-config_path = os.path.join(os.path.dirname(__file__), "configs", "gsmini.yaml")
+model_path = os.path.join("/media/local/data/model", "nnmodel_first_training.pth")
+config_path = os.path.join(os.path.dirname(__file__), "configs", "gsmini_highres.yaml")
 data_dir = os.path.join(os.path.dirname(__file__), "data")
 
 
@@ -42,15 +43,18 @@ def reconstruct():
     # Load the device configuration
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
-        ppmm = config["ppmm"]
+        ppmm = config["mmpp"]
 
     # Create reconstructor
     recon = Reconstructor(model_path, device=args.device)
     bg_image = cv2.imread(os.path.join(data_dir, "background.png"))
+    bg_image = cv2.imread("/media/local/data/background.png")
+
     recon.load_bg(bg_image)
 
     # Reconstruct the surface information from data and save them to files
-    filenames = ["bead.png", "key.png", "seed.png"]
+    filenames = ["bead.png", "key.png", "seed.png", "ball.png"]
+    filenames = ["ball.png"]
     for filename in filenames:
         image = cv2.imread(os.path.join(data_dir, filename))
         G, H, C = recon.get_surface_info(image, ppmm)
@@ -59,7 +63,7 @@ def reconstruct():
         fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(15, 10))
         axes[0, 0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         axes[0, 0].set_title("GelSight Image")
-        plot_gradients(fig, axes[0, 1], G[:, :, 0], G[:, :, 1], mask=C, mode="rgb")
+        plot_gradients(fig, axes[0, 1], G[:, :, 0], G[:, :, 1], mask=None, mode="rgb")
         axes[0, 1].set_title("Reconstructed Gradients")
         axes[1, 0].imshow(H, cmap="jet")
         axes[1, 0].set_title("Reconstructed Heights")
@@ -72,6 +76,7 @@ def reconstruct():
         plt.savefig(save_path)
         plt.close()
         print("Save results to %s" % save_path)
+        depth_map_to_point_cloud(H, vis=True)
 
 
 if __name__ == "__main__":

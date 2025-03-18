@@ -87,7 +87,7 @@ class CalibrateApp(ng.Screen):
         # Load background
         self.bg_img = cv2.imread(os.path.join(calib_data, "background.png"))
         # Initialize the circle
-        self.circle = Circle(self.imgw / 2, self.imgh / 2, radius=200)
+        self.circle = Circle(self.imgw / 2, self.imgh / 2)
         self.stage = 0
 
         def open_cb():
@@ -155,7 +155,7 @@ class CalibrateApp(ng.Screen):
         overlay = orig_img.copy()
         center_tuple = (int(center[0]), int(center[1]))
         cv2.circle(overlay, center_tuple, radius, color_circle, 1)
-        cv2.circle(overlay, center_tuple, 2, color_circle, -1)
+        cv2.circle(overlay, center_tuple, 1, color_circle, -1)
         cv2.addWeighted(overlay, opacity, orig_img, 1 - opacity, 0, overlay)
         return overlay
 
@@ -195,6 +195,7 @@ class CalibrateApp(ng.Screen):
                 cx = self.circle.center[0]
                 cy = self.circle.center[1]
             radius = max(self.circle.radius - 13, 5)
+            radius = self.circle.radius
             self.circle = Circle(cx, cy, radius=radius)
 
         # Add circle and add img to viewer
@@ -335,8 +336,8 @@ def label_data():
     config_path = args.config_path
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
-        imgh = config["raw_imgh"]
-        imgw = config["raw_imgw"]
+        imgh = config["imgh"]
+        imgw = config["imgw"]
 
     # Start the label process
     ng.init()
@@ -372,7 +373,7 @@ def parse_args():
         "--config_path",
         type=str,
         help="path of configuring gelsight",
-        default=os.path.join(config_dir, "gsmini.yaml"),
+        default=os.path.join(config_dir, "gsmini_highres.yaml"),
     )
     parser.add_argument(
         "-d",

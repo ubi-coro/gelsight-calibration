@@ -8,6 +8,7 @@ import torch
 from torch import nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from calibration.utils import load_csv_as_dict, transfer_weights
 from calibration.models import BGRXYDataset, BGRXYMLPNet_
@@ -66,8 +67,8 @@ def train_model():
     data_path = os.path.join(calib_dir, "train_test_split.json")
     with open(data_path, "r") as f:
         data = json.load(f)
-        train_reldirs = data["train"]
-        test_reldirs = data["test"]
+        train_reldirs = data["train"][:4]
+        test_reldirs = data["test"][:1]
 
     # Load the train and test data including the background data
     train_data = {"all_bgrxys": [], "all_gxyangles": []}
@@ -76,21 +77,24 @@ def train_model():
         if not os.path.isfile(data_path):
             raise ValueError("Data file %s does not exist" % data_path)
         data = np.load(data_path)
-        train_data["all_bgrxys"].append(data["bgrxys"][data["mask"]])
-        train_data["all_gxyangles"].append(data["gxyangles"][data["mask"]])
+        mask = np.full_like(data["mask"], True, dtype=bool)
+        train_data["all_bgrxys"].append(data["bgrxys"][mask])
+        train_data["all_gxyangles"].append(data["gxyangles"][mask])
     test_data = {"all_bgrxys": [], "all_gxyangles": []}
     for experiment_reldir in test_reldirs:
         data_path = os.path.join(calib_dir, experiment_reldir, "data.npz")
         if not os.path.isfile(data_path):
             raise ValueError("Data file %s does not exist" % data_path)
         data = np.load(data_path)
-        test_data["all_bgrxys"].append(data["bgrxys"][data["mask"]])
-        test_data["all_gxyangles"].append(data["gxyangles"][data["mask"]])
+        mask = np.full_like(data["mask"], True, dtype=bool)
+        test_data["all_bgrxys"].append(data["bgrxys"][mask])
+        test_data["all_gxyangles"].append(data["gxyangles"][mask])
     #Load background data
     bg_path = os.path.join(calib_dir, "background_data.npz")
     bg_data = np.load(bg_path)
-    bgrxys = bg_data["bgrxys"][bg_data["mask"]]
-    gxyangles = bg_data["gxyangles"][bg_data["mask"]]
+    mask = np.full_like(bg_data["mask"], True, dtype=bool)
+    bgrxys = bg_data["bgrxys"][mask]
+    gxyangles = bg_data["gxyangles"][mask]
     perm = np.random.permutation(len(bgrxys))
     n_train = np.sum([len(bgrxys) for bgrxys in train_data["all_bgrxys"]]) // 5
     n_test = np.sum([len(bgrxys) for bgrxys in test_data["all_bgrxys"]]) // 5
@@ -109,9 +113,9 @@ def train_model():
 
     # Create train and test Dataloader
     train_dataset = BGRXYDataset(train_bgrxys, train_gxyangles)
-    train_dataloader = DataLoader(train_dataset, batch_size=1024, shuffle=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=1024*128, shuffle=True)
     test_dataset = BGRXYDataset(test_bgrxys, test_gxyangles)
-    test_dataloader = DataLoader(test_dataset, batch_size=1024, shuffle=False)
+    test_dataloader = DataLoader(test_dataset, batch_size=1024*128, shuffle=False)
 
     # Create the MLP Net for training
     device = args.device
@@ -135,7 +139,7 @@ def train_model():
     for epoch_idx in range(args.n_epochs):
         losses = []
         net.train()
-        for bgrxys, gxyangles in train_dataloader:
+        for bgrxys, gxyangles in tqdm(train_dataloader):
             bgrxys = bgrxys.to(device)
             gxyangles = gxyangles.to(device)
             optimizer.zero_grad()
@@ -181,7 +185,7 @@ def evaluate(net, dataloader, device):
     :param device: str; the device to evaluate the network.
     """
     losses = []
-    for bgrxys, gxyangles in dataloader:
+    for bgrxys, gxyangles in tqdm(dataloader):
         bgrxys = bgrxys.to(device)
         gxyangles = gxyangles.to(device)
         outputs = net(bgrxys)

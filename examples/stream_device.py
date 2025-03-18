@@ -1,5 +1,6 @@
 import argparse
 import os
+import time
 
 import cv2
 import yaml
@@ -39,7 +40,7 @@ def stream_device():
 
     # Load the device configuration
     if args.device_name == "gsmini":
-        config_file = "gsmini.yaml"
+        config_file = "gsmini_highres.yaml"
     elif args.device_name == "digit":
         config_file = "digit.yaml"
     else:
@@ -54,9 +55,22 @@ def stream_device():
     # Create device and stream the device
     device = Camera(device_name, imgh, imgw)
     device.connect()
-    print("\nPrss any key to quit.\n")
+    bg = device.get_image()
+    cv2.imshow(device_name, bg)
+    print("Record Background")
+    time.sleep(2)
+    bg = device.get_image()
+    print("\nPress any key to quit.\n")
     while True:
         image = device.get_image()
+        diff = cv2.absdiff(image, bg)
+
+        gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+        _, mask = cv2.threshold(gray_diff, 12, 255, cv2.THRESH_BINARY_INV)
+
+        # Apply mask using OpenCV (optimized compared to numpy indexing)
+        # image[mask > 0] = [0, 0, 0]
+
         cv2.imshow(device_name, image)
         key = cv2.waitKey(1)
         if key != -1:

@@ -16,11 +16,7 @@ def plot_gradients(fig, ax, gx, gy, mask=None, mode="rgb", **kwargs):
     if mode == "rgb":
         # Plot the gradient in red and blue
         grad_range = kwargs.get("grad_range", 3.0)
-        red = gx * 255 / grad_range + 127
-        red = np.clip(red, 0, 255)
-        blue = gy * 255 / grad_range + 127
-        blue = np.clip(blue, 0, 255)
-        image = np.stack((red, np.zeros_like(red), blue), axis=-1).astype(np.uint8)
+        image = gradient_img(gx, gy, grad_range)
         if mask is not None:
             image[np.logical_not(mask)] = np.array([127, 0, 127])
         ax.imshow(image)
@@ -42,3 +38,21 @@ def plot_gradients(fig, ax, gx, gy, mask=None, mode="rgb", **kwargs):
         ax.set_ylim(imgh, 0)
     else:
         raise ValueError("Unknown plot gradient mode %s" % mode)
+
+
+def gradient_img(gx, gy, grad_range=3.0):
+    # Return gradient image in red and blue
+    red = gx * 255 / grad_range + 127
+    red = np.clip(red, 0, 255)
+    blue = gy * 255 / grad_range + 127
+    blue = np.clip(blue, 0, 255)
+    image = np.stack((red, np.zeros_like(red), blue), axis=-1).astype(np.uint8)
+    return image
+
+def depth_img(H):
+    H = np.array(H, dtype=np.float32)  # Ensure float for scaling
+    min_val, max_val = H.min(), H.max()
+    if min_val == max_val:
+        return np.zeros_like(H, dtype=np.uint8)  # Avoid division by zero
+    scaled_array = 255 * (H - min_val) / (max_val - min_val)
+    return scaled_array.astype(np.uint8)

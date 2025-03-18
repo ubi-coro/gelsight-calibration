@@ -60,7 +60,7 @@ def test_model():
     # Create device and the reconstructor
     device = Camera(device_name, imgh, imgw)
     device.connect()
-    model_path = os.path.join(args.calib_dir, "model", "nnmodel.pth")
+    model_path = os.path.join(args.calib_dir, "model", "gsmini.pth")
     recon = Reconstructor(model_path, device="cpu")
 
     # Collect background images

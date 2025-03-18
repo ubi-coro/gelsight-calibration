@@ -1,6 +1,8 @@
 import os
+import time
 
 import cv2
+import numpy as np
 import yaml
 
 from gs_sdk.gs_device import FastCamera
@@ -35,9 +37,16 @@ def fast_stream_device():
     # Create device and stream the device
     device = FastCamera(device_name, imgh, imgw, raw_imgh, raw_imgw, framerate)
     device.connect()
-    print("\nPrss any key to quit.\n")
+    bg = device.get_image()
+    cv2.imshow(device_name, bg)
+    print("Record Background")
+    time.sleep(2)
+    bg = device.get_image().astype(np.int16)
+    print("\nPress any key to quit.\n")
     while True:
-        image = device.get_image()
+        image = device.get_image().astype(np.int16)
+        # image = np.abs(image - bg).astype(np.uint8)
+        image = image.astype(np.uint8)
         cv2.imshow(device_name, image)
         key = cv2.waitKey(1)
         if key != -1:

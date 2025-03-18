@@ -1,0 +1,11 @@
+# Device Name
+device_name: "GelSight Mini"
+# Millimeter Per Pixel
+mmpp: 0.00634
+# Desired Image Width and Height: Use full Resolution
+imgh: 2464
+imgw: 3280
+# Raw image width, height, and framerate
+raw_imgh: 2464
+raw_imgw: 3280
+framerate: 25

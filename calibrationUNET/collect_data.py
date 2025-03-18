@@ -50,8 +50,8 @@ def collect_data():
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
         device_name = config["device_name"]
-        imgh = config["raw_imgh"]
-        imgw = config["raw_imgw"]
+        imgh = config["imgh"]
+        imgw = config["imgw"]
 
     # Create the data saving catalog
     catalog_path = os.path.join(calib_dir, "catalog.csv")
@@ -142,7 +142,7 @@ def parse_args():
         "--config_path",
         type=str,
         help="path of the sensor information",
-        default=os.path.join(config_dir, "gsmini.yaml"),
+        default=os.path.join(config_dir, "gsmini_highres.yaml"),
     )
     args = parser.parse_args()
     return args

@@ -16,8 +16,22 @@ class ColorGradientDataset(Dataset):
     def __getitem__(self, index):
         images = torch.tensor(self.images[index], dtype=torch.float32)
         gradient_maps = torch.tensor(self.gradient_maps[index], dtype=torch.float32)
-        return images, gradient_maps
+        return images[index], gradient_maps[index]
 
+
+class GradientCNN(nn.Module):
+    def __init__(self):
+        super(GradientCNN, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 2, kernel_size=3, padding=1)  # Output: (dx, dy)
+        )
+
+    def forward(self, x):
+        return self.conv(x)
 
 # UNet Modell
 class BGRUNet(nn.Module):
