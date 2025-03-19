@@ -14,9 +14,9 @@ class ColorGradientDataset(Dataset):
         return len(self.images)
 
     def __getitem__(self, index):
-        images = torch.tensor(self.images[index], dtype=torch.float32)
-        gradient_maps = torch.tensor(self.gradient_maps[index], dtype=torch.float32)
-        return images[index], gradient_maps[index]
+        image = torch.tensor(self.images[index], dtype=torch.float32).permute(2, 0, 1) # convert to (C, H, W)
+        gradient_map = torch.tensor(self.gradient_maps[index], dtype=torch.float32).permute(2, 0, 1) # convert to (C, H, W)
+        return image, gradient_map
 
 
 class GradientCNN(nn.Module):

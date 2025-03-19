@@ -11,9 +11,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from calibration.utils import transfer_weights
 from models import ColorGradientDataset, GradientCNN
-from gs_sdk.gs_reconstruct import BGRXYMLPNet
 
 """
 This script trains the gradient prediction network.

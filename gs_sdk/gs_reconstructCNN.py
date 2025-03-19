@@ -6,37 +6,11 @@ import numpy as np
 import open3d
 from scipy import fftpack
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
+from gs_sdk.gs_reconstruct import Reconstructor
+from calibrationUNET.models import GradientCNN
 
-class BGRXYMLPNet(nn.Module):
-    """
-    The Neural Network architecture for GelSight calibration.
-
-    This class uses 1-by-1 convolution, which is technically the same as using MLP.
-    """
-
-    def __init__(self):
-        super(BGRXYMLPNet, self).__init__()
-        input_channels = 5
-        self.conv1 = nn.Conv2d(input_channels, 128, kernel_size=1)
-        self.bn1 = nn.BatchNorm2d(128)
-        self.conv2 = nn.Conv2d(128, 32, kernel_size=1)
-        self.bn2 = nn.BatchNorm2d(32)
-        self.conv3 = nn.Conv2d(32, 32, kernel_size=1)
-        self.bn3 = nn.BatchNorm2d(32)
-        self.conv4 = nn.Conv2d(32, 2, kernel_size=1)
-
-    def forward(self, x):
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = F.relu(self.bn3(self.conv3(x)))
-        x = self.conv4(x)
-        return x
-
-
-class Reconstructor:
+class ReconstructorCNN:
     """
     The GelSight reconstruction class.
 
@@ -60,7 +34,7 @@ class Reconstructor:
         # Load the gxy model
         if not os.path.isfile(model_path):
             raise ValueError("Error opening %s, file does not exist" % model_path)
-        self.gxy_net = BGRXYMLPNet()
+        self.gxy_net = GradientCNN()
         self.gxy_net.load_state_dict(torch.load(model_path), self.device)
         self.gxy_net.eval()
 
@@ -106,11 +80,7 @@ class Reconstructor:
 
         # Calculate the height map
         H = poisson_dct_neumaan(G[:, :, 0], G[:, :, 1]).astype(np.float32)
-        C = self.get_contact_mask(H, image, ppmm)
 
-        return G, H, C
-
-    def get_contact_mask(self, H, image, ppmm):
         # Calculate the contact mask
         if self.contact_mode == "standard":
             # Find the contact mask based on color difference
@@ -127,7 +97,7 @@ class Reconstructor:
             cutoff = np.percentile(H, 85) - 0.2 / ppmm
             height_mask = H < cutoff
             C = np.logical_and(color_mask, height_mask)
-        else:  # self.contact_mode == "flat"
+        elif self.contact_mode == "flat":
             # Find the contact mask based on color difference
             diff_image = image.astype(np.float32) - self.bg_image.astype(np.float32)
             color_mask = np.linalg.norm(diff_image, axis=-1) > 10
@@ -137,7 +107,8 @@ class Reconstructor:
             C = cv2.erode(
                 color_mask.astype(np.uint8), np.ones((25, 25), np.uint8)
             ).astype(np.bool_)
-        return C
+
+        return G, H, C
 
 
 def image2bgrxys(image):
