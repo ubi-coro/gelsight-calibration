@@ -64,7 +64,7 @@ def main():
                 print("save")
                 # compute the depth map
                 G, H_poisson, C = recon.get_surface_info(f1, ppmm)
-                H2 = calc_depth_map(G[:,:,0], G[:,:,1])
+                # H2 = calc_depth_map(G[:,:,0], G[:,:,1])
                 time_stamp = time.time()
                 save_path_img = os.path.join(args.save_dir, f"{time_stamp}.png")
                 save_path_depth_poisson = os.path.join(args.save_dir, f"{time_stamp}_depth_poisson.png")
@@ -75,11 +75,11 @@ def main():
                 grad_img = gradient_img(G[:,:, 0], G[:, :, 1])
                 cv2.imwrite(save_path_img, f1)
                 cv2.imwrite(save_path_depth_poisson, depth_img(H_poisson))
-                cv2.imwrite(save_path_depth, depth_img(H2))
+                # cv2.imwrite(save_path_depth, depth_img(H2))
                 cv2.imwrite(save_path_G, grad_img)
                 cv2.imwrite(save_path_C, C.astype(np.uint8)*255)
                 depth_map_to_point_cloud(H_poisson, vis=True)
-                depth_map_to_point_cloud(H2, vis=True)
+                # depth_map_to_point_cloud(H2, vis=True)
 
     except KeyboardInterrupt:
         print('Interrupted!')

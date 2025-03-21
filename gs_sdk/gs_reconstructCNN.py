@@ -45,14 +45,11 @@ class ReconstructorCNN:
         :param bg_image: np.array (H, W, 3); the background image.
         """
         self.bg_image = bg_image
-
-        # Calculate the gradients of the background
-        bgrxys = image2bgrxys(bg_image)
-        bgrxys = bgrxys.transpose(2, 0, 1)
-        features = torch.from_numpy(bgrxys[np.newaxis, :, :, :]).float().to(self.device)
+        transpose = bg_image.transpose(2, 0, 1)
+        features = torch.from_numpy(transpose).float().to(self.device)
         with torch.no_grad():
             gxyangles = self.gxy_net(features)
-            gxyangles = gxyangles[0].cpu().detach().numpy()
+            gxyangles = gxyangles.cpu().detach().numpy()
             self.bg_G = np.tan(gxyangles.transpose(1, 2, 0))
 
     def get_surface_info(self, image, ppmm):
@@ -66,12 +63,11 @@ class ReconstructorCNN:
                 C: np.array (H, W); the contact mask.
         """
         # Calculate the gradients
-        bgrxys = image2bgrxys(image)
-        bgrxys = bgrxys.transpose(2, 0, 1)
-        features = torch.from_numpy(bgrxys[np.newaxis, :, :, :]).float().to(self.device)
+        transpose = image.transpose(2, 0, 1)
+        features = torch.from_numpy(transpose).float().to(self.device)
         with torch.no_grad():
             gxyangles = self.gxy_net(features)
-            gxyangles = gxyangles[0].cpu().detach().numpy()
+            gxyangles = gxyangles.cpu().detach().numpy()
             G = np.tan(gxyangles.transpose(1, 2, 0))
             if self.bg_image is not None:
                 G = G - self.bg_G
