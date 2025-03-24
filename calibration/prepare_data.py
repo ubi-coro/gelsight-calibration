@@ -5,6 +5,7 @@ import os
 import cv2
 import numpy as np
 import yaml
+from tqdm import tqdm
 
 from calibration.utils import load_csv_as_dict
 from gs_sdk.gs_reconstruct import image2bgrxys
@@ -80,10 +81,10 @@ def prepare_data():
     config_path = args.config_path
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
-        ppmm = config["ppmm"]
+        ppmm = config["mmpp"]
 
     # Extract the pixel data from each tactile image and calculate the gradients
-    for experiment_reldir, diameter in zip(experiment_reldirs, diameters):
+    for experiment_reldir, diameter in tqdm(zip(experiment_reldirs, diameters), total=len(experiment_reldirs)):
         experiment_dir = os.path.join(calib_dir, experiment_reldir)
         image_path = os.path.join(experiment_dir, "gelsight.png")
         image = cv2.imread(image_path)
