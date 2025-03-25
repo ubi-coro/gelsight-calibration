@@ -15,7 +15,6 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from calibrationUNET.net_factory import get_creator
-from models import ColorGradientDataset, GradientCNN
 
 # Configure logging
 logging.basicConfig(format='[%(levelname)s] %(message)s', level=logging.INFO)
@@ -52,8 +51,8 @@ class TrainConfig:
     model_dir: str = None  # This path is intended for storing or locating training log files.
     device: str = "cuda"  # device to train the network. Must be "cuda" or "cpu". Default = "cuda"
 
-    batch_size: int = 2  # batch size
-    n_epochs: int = 50  # number of epochs. Default = 50
+    batch_size: int = 1028*512  # batch size
+    n_epochs: int = 1  # number of epochs. Default = 50
     lr: float = 0.002  # learning rate. Default = 0.002
 
     def __post_init__(self):
@@ -67,70 +66,32 @@ class TrainConfig:
             os.makedirs(self.model_dir)
 
 
-def load_json(file_path: str) -> dict:
-    """Load JSON file and handle exceptions."""
-    try:
-        with open(file_path, "r") as f:
-            return json.load(f)
-    except FileNotFoundError as e:
-        logging.error(f"File not found: {file_path}")
-        raise e
-    except json.JSONDecodeError as e:
-        logging.error(f"Error parsing JSON: {file_path}")
-        raise e
-
-
-def _load_data_dirs(data_dir) -> (List[str], List[str]):
-    data_path = os.path.join(data_dir, "train_test_split.json")
-    data = load_json(data_path)
-    train_dirs = [os.path.join(data_dir, rel_dir) for rel_dir in data["train"]]
-    test_dirs = [os.path.join(data_dir, rel_dir) for rel_dir in data["test"]]
-    return train_dirs, test_dirs
-
-
-def setup(data_dir):
-    train_dirs, test_dirs = _load_data_dirs(data_dir)
-    train_data = load_data(train_dirs)
-    test_data = load_data(test_dirs)
-    train_dataset = ColorGradientDataset(train_data["images"], train_data["gradient_maps"])
-    val_dataset = ColorGradientDataset(test_data["images"], test_data["gradient_maps"])
-    return train_dataset, val_dataset
-
-
-def load_data(reldirs: List[str]) -> Dict[str, List[np.ndarray]]:
-    data = {"images": [], "gradient_maps": []}
-    for reldir in reldirs:
-        path = os.path.join(reldir, "data.npz")
-        if not os.path.isfile(path):
-            raise ValueError(f"Data file {path} does not exist")
-        loaded = np.load(path)
-        data["gradient_maps"].append(loaded["gradient_map"])
-        data["images"].append(loaded["image"])
-    return data
-
-
 class Trainer:
     def __init__(self, config: TrainConfig):
         self.config = config
 
+        logging.info("Setup creator")
         net_dataset_creator = get_creator(self.config.net_name)
 
         self.device = config.device
 
-        # Create the CNN Net for training
+        logging.info("Create Net")
         self.net: nn.Module = net_dataset_creator.get_net().to(self.device)
         self.criterion = nn.L1Loss()
         self.optimizer = optim.Adam(self.net.parameters(), lr=config.lr, weight_decay=0.0)
         self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=10, gamma=0.5)
 
         # Create train and test Dataloader
+        logging.info("Create Dataloader")
         train_dataset, val_dataset = net_dataset_creator.setup(self.config.data_dir)
         self.train_dataloader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True)
         self.val_dataloader = DataLoader(val_dataset, batch_size=config.batch_size, shuffle=False)
-
         self.best_loss = np.inf
 
+        logging.info("Finished setup")
+
     def train_model(self):
+        logging.info("Start training")
         # Initial evaluation
         train_mae = evaluate(self.net, self.train_dataloader, self.device)
         test_mae = evaluate(self.net, self.val_dataloader, self.device)
@@ -138,7 +99,7 @@ class Trainer:
         logging.info("without train, Train MAE: %.4f, Test MAE: %.4f" % (train_mae, test_mae))
 
         # Train the model
-        for epoch_idx in tqdm(range(self.config.n_epochs)):
+        for epoch_idx in range(self.config.n_epochs):
             train_mean_loss, val_mean_loss = self.epoch()
             traj["train_maes"].append(train_mean_loss)
             traj["test_maes"].append(val_mean_loss)
@@ -154,7 +115,10 @@ class Trainer:
     def save_loss_plot(self, traj):
         loss_path = os.path.join(self.config.base_dir, "loss.json")
         with open(loss_path, "w") as f:
-            json.dump(traj, f)
+            test_maes = [x.item() for x in traj["test_maes"]]
+            train_maes = [x.item() for x in traj["train_maes"]]
+            new_json = {"test_maes": test_maes, "train_maes": train_maes}
+            json.dump(new_json, f)
         # Save the training curve
         plot_path = os.path.join(self.config.base_dir, "training_curve.png")
         plt.plot(np.arange(len(traj["train_maes"])), traj["train_maes"], color="blue")
@@ -168,7 +132,7 @@ class Trainer:
     def epoch(self):
         losses = []
         self.net.train()
-        for image, gradient_map in tqdm(self.train_dataloader):
+        for image, gradient_map in tqdm(self.train_dataloader, position=0, leave=True, desc="Batch"):
             loss = self.training_step(gradient_map, image)
             losses.append(loss)
         self.net.eval()
@@ -206,7 +170,7 @@ def evaluate(net, dataloader, device):
     :param device: str; the device to evaluate the network.
     """
     losses = []
-    for image, gradient_map in dataloader:
+    for image, gradient_map in tqdm(dataloader, desc="Eval Batch"):
         image = image.to(device)
         gradient_map = gradient_map.to(device)
         outputs = net(image)
