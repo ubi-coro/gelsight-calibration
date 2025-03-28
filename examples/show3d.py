@@ -1,50 +1,71 @@
 import argparse
 import time
-from argparse import Namespace
+from dataclasses import dataclass, field
 
 import cv2
 import os
 
+import draccus
 import numpy as np
 import yaml
 
-from gs_sdk import gs_device
+from calibrationUNET.net_factory import NetName
 from gs_sdk import gs_reconstruct
-from gs_sdk.gs_reconstruct import calc_depth_map
+from gs_sdk.gs_device import Camera
+from gs_sdk.gs_reconstruct import calc_depth_map, Reconstructor
+from gs_sdk.gs_reconstructCNN import ReconstructorCNN
 from gs_sdk.viz_utils import gradient_img, depth_img
+from image3d import depth_map_to_point_cloud
 
 config_dir = os.path.join(os.path.dirname(__file__), "./configs")
 model_dir = os.path.join(os.path.dirname(__file__), "./models")
 
-from image3d import depth_map_to_point_cloud
+@dataclass
+class Args:
+    training_dir: str = field()
+    background_path: str = field()
 
-def main():
-    # Set flags
-    SAVE_VIDEO_FLAG = False
-    FIND_ROI = False
-    GPU = False
+    device: str = field(default="cpu")
+    device_config_path: str = os.path.join(config_dir, "gsmini_highres.yaml")
+    model_name: str = "best_model.pth"
+    save_dir: str = "save"
 
-    # Path to 3d model
-    args: Namespace = parse_args()
+    @property
+    def model_path(self):
+            return os.path.join(self.training_dir, "model", self.model_name)
 
-    with open(args.config_path, "r") as f:
+    @property
+    def net_name(self):
+        config_path = os.path.join(self.training_dir, "config.yaml")
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+            net_name = config["net_name"]
+        return net_name
+
+@draccus.wrap()
+def get_reconstructor(args: Args):
+    if args.net_name == NetName.PixelNet:
+        return Reconstructor(args.model_path, device=args.device)
+    elif args.net_name == NetName.GradientCNN:
+        return ReconstructorCNN(args.model_path, device=args.device)
+
+@draccus.wrap()
+def main(args: Args):
+
+    with open(args.device_config_path, "r") as f:
         config = yaml.safe_load(f)
         # Get the camera resolution
-        ppmm = config["mmpp"]
+        ppmm = config["ppmm"]
         imgw = config["imgw"]
         imgh = config["imgh"]
 
     # the device ID can change after unplugging and changing the usb ports.
     # on linux run, v4l2-ctl --list-devices, in the terminal to get the device ID for camera
-    dev = gs_device.Camera("GelSight Mini", imgh, imgw)
+    dev = Camera("GelSight Mini", imgh, imgw)
     dev.connect()
 
-    if GPU:
-        gpuorcpu = "cuda"
-    else:
-        gpuorcpu = "cpu"
 
-    recon = gs_reconstruct.Reconstructor(args.model_path, device=gpuorcpu)
+    recon = get_reconstructor()
     bg_image = cv2.imread(args.background_path)
     recon.load_bg(bg_image)
 
@@ -86,49 +107,6 @@ def main():
         dev.release()
         cv2.destroyAllWindows()
 
-
-
-def parse_args() -> Namespace:
-    # Argument Parser
-    parser = argparse.ArgumentParser(description="Show 3D-Reconstruction")
-    parser.add_argument(
-        "-d",
-        "--device",
-        type=str,
-        choices=["cuda", "cpu"],
-        default="cpu",
-        help="The device to load and run the neural network model.",
-    )
-    parser.add_argument(
-        "-c",
-        "--config_path",
-        type=str,
-        help="path of the sensor information",
-        default=os.path.join(config_dir, "gsmini_highres.yaml"),
-    )
-    parser.add_argument(
-        "-m",
-        "--model_path",
-        type=str,
-        help="path of the model",
-        default=os.path.join(model_dir, "gsmini.pth"),
-    )
-    parser.add_argument(
-        "-bg",
-        "--background_path",
-        type=str,
-        help="path of the background image",
-        default=os.path.join(model_dir, "background.png"),
-    )
-    parser.add_argument(
-        "-s",
-        "--save_dir",
-        type=str,
-        help="path of the save directory",
-        default=os.path.join(".", "save"),
-    )
-    args: Namespace = parser.parse_args()
-    return args
 
 
 if __name__ == "__main__":

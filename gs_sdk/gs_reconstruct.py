@@ -9,6 +9,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from calibration.models import BGRXYMLPNet_
+from calibration.utils import transfer_weights
+
 
 class BGRXYMLPNet(nn.Module):
     """
@@ -60,8 +63,11 @@ class Reconstructor:
         # Load the gxy model
         if not os.path.isfile(model_path):
             raise ValueError("Error opening %s, file does not exist" % model_path)
+
+        mlp_net = BGRXYMLPNet_()
+        mlp_net.load_state_dict(torch.load(model_path), self.device)
         self.gxy_net = BGRXYMLPNet()
-        self.gxy_net.load_state_dict(torch.load(model_path), self.device)
+        transfer_weights(mlp_net, self.gxy_net)
         self.gxy_net.eval()
 
     def load_bg(self, bg_image):

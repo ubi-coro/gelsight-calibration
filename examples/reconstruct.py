@@ -43,7 +43,7 @@ def reconstruct():
     # Load the device configuration
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
-        ppmm = config["mmpp"]
+        ppmm = config["ppmm"]
 
     # Create reconstructor
     recon = Reconstructor(model_path, device=args.device)

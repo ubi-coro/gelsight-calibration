@@ -81,7 +81,7 @@ def prepare_data():
     config_path = args.config_path
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
-        ppmm = config["mmpp"]
+        ppmm = config["ppmm"]
 
     # Extract the pixel data from each tactile image and calculate the gradients
     for experiment_reldir, diameter in tqdm(zip(experiment_reldirs, diameters), total=len(experiment_reldirs)):

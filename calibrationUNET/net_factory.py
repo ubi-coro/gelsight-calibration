@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import List, Dict, Type
 
 import numpy as np
@@ -14,6 +15,10 @@ from calibrationUNET.models import GradientCNN, ColorGradientDataset
 from calibration.models import BGRXYMLPNet_, BGRXYDataset
 
 CREATOR_REGISTRY: Dict[str, Type[NetDataset]] = {}
+
+class NetName(str, Enum):
+    GradientCNN = "GradientCNN"
+    PixelNet = "PixelNet"
 
 
 def register_creator(name):
@@ -68,7 +73,7 @@ class NetDataset(ABC):
         pass
 
 
-@register_creator("GradientCNN")
+@register_creator(NetName.GradientCNN)
 class CNNCreator(NetDataset, ABC):
     def __init__(self):
         super().__init__()
@@ -95,7 +100,7 @@ class CNNCreator(NetDataset, ABC):
         return data
 
 
-@register_creator("PixelNet")
+@register_creator(NetName.PixelNet)
 class PixelNetCreator(NetDataset, ABC):
     def __init__(self):
         super().__init__()

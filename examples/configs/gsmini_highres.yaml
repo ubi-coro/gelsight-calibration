@@ -1,7 +1,7 @@
 # Device Name
 device_name: "GelSight Mini"
 # Millimeter Per Pixel
-mmpp: 0.00634
+ppmm: 0.00634
 # Desired Image Width and Height: Use full Resolution
 imgh: 2464
 imgw: 3280

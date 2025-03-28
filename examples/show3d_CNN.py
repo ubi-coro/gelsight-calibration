@@ -30,7 +30,7 @@ def main():
     with open(args.config_path, "r") as f:
         config = yaml.safe_load(f)
         # Get the camera resolution
-        ppmm = config["mmpp"]
+        ppmm = config["ppmm"]
         imgw = config["imgw"]
         imgh = config["imgh"]
 

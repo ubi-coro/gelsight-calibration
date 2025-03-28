@@ -37,12 +37,12 @@ class PrepareConfig:
 
 def prepare_data():
     # Load the data_dict
-    calib_dir, diameters, experiment_reldirs, mmpp = setup_data()
+    calib_dir, diameters, experiment_reldirs, ppmm = setup_data()
 
     # Extract the pixel data from each tactile image and calculate the gradients
     for experiment_reldir, diameter in tqdm(zip(experiment_reldirs, diameters), total=len(experiment_reldirs)):
         experiment_dir = os.path.join(calib_dir, experiment_reldir)
-        prepare_image(diameter, experiment_dir, mmpp)
+        prepare_image(diameter, experiment_dir, ppmm)
 
 @draccus.wrap()
 def setup_data(config: PrepareConfig):
@@ -63,10 +63,10 @@ def setup_data(config: PrepareConfig):
         json.dump(dict_to_save, f, indent=4)
     with open(config.device_config_path, "r") as f:
         device_config = yaml.safe_load(f)
-        mmpp = device_config["mmpp"]
-    return calib_dir, diameters, experiment_reldirs, mmpp
+        ppmm = device_config["ppmm"]
+    return calib_dir, diameters, experiment_reldirs, ppmm
 
-def prepare_image(diameter, experiment_dir, mmpp):
+def prepare_image(diameter, experiment_dir, ppmm):
     image_path = os.path.join(experiment_dir, "gelsight.png")
     image = cv2.imread(image_path)
 
@@ -82,7 +82,7 @@ def prepare_image(diameter, experiment_dir, mmpp):
     dists = np.linalg.norm(xys - center, axis=2)
     mask = dists < radius
     # Find the gradient angles, prepare the data, and save the data
-    ball_radius = diameter / mmpp / 2.0
+    ball_radius = diameter / ppmm / 2.0
     if ball_radius < radius:
         print(experiment_dir)
         print("Press too deep, deeper than the ball radius")

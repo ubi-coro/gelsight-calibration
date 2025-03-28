@@ -43,16 +43,16 @@ class TrainConfig:
     """
     Configuration class for the training of the gradient prediction network.
     """
-    net_name = "PixelNet"
     _timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     # dirs
+    net_name: str = "PixelNet"
     data_dir: str = "/media/local/data"  # directory to the calibration data
     base_dir: str = os.path.join(data_dir, "training", f"{_timestamp}_{net_name}")
     model_dir: str = None  # This path is intended for storing or locating training log files.
     device: str = "cuda"  # device to train the network. Must be "cuda" or "cpu". Default = "cuda"
 
     batch_size: int = 1028*512  # batch size
-    n_epochs: int = 1  # number of epochs. Default = 50
+    n_epochs: int = 50  # number of epochs. Default = 50
     lr: float = 0.002  # learning rate. Default = 0.002
 
     def __post_init__(self):
@@ -142,6 +142,7 @@ class Trainer:
         if val_mean_loss < self.best_loss:
             self.best_loss = val_mean_loss
             self.save_model("best_model")
+            logging.info(f"Best model saved")
 
         return train_mean_loss, val_mean_loss
 
